@@ -1,7 +1,18 @@
 import { FC, useCallback, useRef, useState } from 'react';
 
-import { Stage, Layer, Image, Rect, Group, Circle, Line } from 'react-konva';
+import {
+  Stage,
+  Layer,
+  Image,
+  Rect,
+  Group,
+  Circle,
+  Line,
+  Transformer,
+} from 'react-konva';
 import { Stage as S } from 'konva/lib/Stage';
+import { Transformer as T } from 'konva/lib/shapes/Transformer';
+import { KonvaEventObject } from 'konva/lib/Node';
 import { v4 as uuidv4 } from 'uuid';
 
 import { CIRCLE, PENCIL, RECTANGLE, SELECT, SIZE } from '../../consts';
@@ -18,6 +29,8 @@ export const Paint: FC = () => {
   const stageRef = useRef<S | null>(null);
   const isPaintingRef = useRef<boolean>(false);
   const currentShapeIdRef = useRef<string>('');
+  const transformerRef = useRef<T>(null);
+  const isDraggable = drawType === SELECT;
 
   const clearStage = useCallback(() => {
     setDrawType(SELECT);
@@ -25,7 +38,17 @@ export const Paint: FC = () => {
     setCircles([]);
     setRects([]);
     setLines([]);
+    transformerRef?.current?.nodes?.([]);
   }, []);
+
+  const onShapeClick = (e: KonvaEventObject<MouseEvent>) => {
+    if (drawType !== SELECT) return;
+    transformerRef?.current?.nodes?.([e.currentTarget]);
+  };
+
+  const onBgClick = () => {
+    transformerRef?.current?.nodes?.([]);
+  };
 
   const onStageMouseDown = () => {
     if (drawType === SELECT) return;
@@ -161,6 +184,7 @@ export const Paint: FC = () => {
             width={SIZE}
             height={SIZE}
             fill='white'
+            onClick={onBgClick}
           />
           {image && (
             <Image
@@ -169,6 +193,8 @@ export const Paint: FC = () => {
               image={image}
               width={SIZE / 3}
               height={SIZE / 3}
+              draggable={isDraggable}
+              onClick={onShapeClick}
             />
           )}
         </Layer>
@@ -185,6 +211,8 @@ export const Paint: FC = () => {
                   height={rect.height}
                   stroke={'black'}
                   strokeWidth={3}
+                  draggable={isDraggable}
+                  onClick={onShapeClick}
                 />
               ))}
           </Group>
@@ -199,6 +227,8 @@ export const Paint: FC = () => {
                   radius={circle.radius}
                   stroke={'black'}
                   strokeWidth={3}
+                  draggable={isDraggable}
+                  onClick={onShapeClick}
                 />
               ))}
           </Group>
@@ -213,10 +243,17 @@ export const Paint: FC = () => {
                   lineJoin='round'
                   stroke={'black'}
                   strokeWidth={5}
+                  isDraggable={isDraggable}
+                  onClick={onShapeClick}
                 />
               ))}
           </Group>
         </Layer>
+        {drawType === SELECT && (
+          <Layer>
+            <Transformer ref={transformerRef} />
+          </Layer>
+        )}
       </Stage>
     </div>
   );
