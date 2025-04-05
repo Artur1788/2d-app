@@ -1,5 +1,11 @@
+import { Paint } from './components';
+
 function App() {
-  return <h1 className='font-bold text-3xl underline'>Hello world!</h1>;
+  return (
+    <div className='flex bg-neutral-100 min-h-dvh'>
+      <Paint />
+    </div>
+  );
 }
 
 export default App;
