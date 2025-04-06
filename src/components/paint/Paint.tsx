@@ -1,24 +1,33 @@
 import { FC, useCallback, useRef, useState } from 'react';
 
 import {
-  Stage,
-  Layer,
-  Image,
-  Rect,
-  Group,
   Circle,
+  Group,
+  Image,
+  Layer,
   Line,
+  Rect,
+  Stage,
   Transformer,
 } from 'react-konva';
+
+import { KonvaEventObject } from 'konva/lib/Node';
 import { Stage as S } from 'konva/lib/Stage';
 import { Transformer as T } from 'konva/lib/shapes/Transformer';
-import { KonvaEventObject } from 'konva/lib/Node';
 import { v4 as uuidv4 } from 'uuid';
 
-import { CIRCLE, PENCIL, RECTANGLE, SELECT, SIZE } from '../../consts';
+import {
+  CIRCLE,
+  MIN_SIZE,
+  PENCIL,
+  RECTANGLE,
+  SELECT,
+  SIZE,
+} from '../../consts';
 import { DrawType } from '../../types';
 import { Toolbar } from '../toolbar/Toolbar';
-import { IRectangle, ICircle, ILine } from './paint.types';
+import { ICircle, ILine, IRectangle } from './paint.types';
+import { useMatchMedia } from '../../hooks/useMatchMedia';
 
 export const Paint: FC = () => {
   const [drawType, setDrawType] = useState<DrawType>(SELECT);
@@ -26,6 +35,7 @@ export const Paint: FC = () => {
   const [rects, setRects] = useState<IRectangle[]>([]);
   const [circles, setCircles] = useState<ICircle[]>([]);
   const [lines, setLines] = useState<ILine[]>([]);
+  const isMobile = useMatchMedia();
   const stageRef = useRef<S | null>(null);
   const isPaintingRef = useRef<boolean>(false);
   const currentShapeIdRef = useRef<string>('');
@@ -50,7 +60,7 @@ export const Paint: FC = () => {
     transformerRef?.current?.nodes?.([]);
   };
 
-  const onStageMouseDown = () => {
+  const onStageMouseDown = useCallback(() => {
     if (drawType === SELECT) return;
 
     isPaintingRef.current = true;
@@ -97,9 +107,9 @@ export const Paint: FC = () => {
       default:
         break;
     }
-  };
+  }, [drawType]);
 
-  const onStageMouseMove = () => {
+  const onStageMouseMove = useCallback(() => {
     if (drawType === SELECT || !isPaintingRef.current) return;
 
     const stageEl = stageRef.current;
@@ -151,7 +161,7 @@ export const Paint: FC = () => {
       default:
         break;
     }
-  };
+  }, [drawType]);
 
   const onStageMouseUp = () => {
     stageRef.current?.removeEventListener('mousemove');
@@ -170,8 +180,8 @@ export const Paint: FC = () => {
 
       <Stage
         ref={stageRef}
-        height={SIZE}
-        width={SIZE}
+        width={isMobile ? MIN_SIZE : SIZE}
+        height={isMobile ? MIN_SIZE : SIZE}
         onMouseDown={onStageMouseDown}
         onMouseUp={onStageMouseUp}
         onMouseMove={isPaintingRef.current ? onStageMouseMove : undefined}
@@ -181,8 +191,8 @@ export const Paint: FC = () => {
           <Rect
             x={0}
             y={0}
-            width={SIZE}
-            height={SIZE}
+            width={isMobile ? MIN_SIZE : SIZE}
+            height={isMobile ? MIN_SIZE : SIZE}
             fill='white'
             onClick={onBgClick}
           />
@@ -243,7 +253,7 @@ export const Paint: FC = () => {
                   lineJoin='round'
                   stroke={'black'}
                   strokeWidth={5}
-                  isDraggable={isDraggable}
+                  draggable={isDraggable}
                   onClick={onShapeClick}
                 />
               ))}

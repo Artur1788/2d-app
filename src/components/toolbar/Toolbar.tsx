@@ -33,7 +33,7 @@ export const Toolbar: FC<ToolbarProps> = memo(
     };
 
     return (
-      <div className='flex justify-center items-center gap-x-6 mb-20'>
+      <div className='flex flex-wrap justify-center items-center gap-x-6 mb-20'>
         <div className='flex justify-center items-center gap-x-4 p-4'>
           <ToolbarItem
             type={SELECT}
