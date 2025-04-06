@@ -39,6 +39,7 @@ export const Paint: FC = () => {
   const stageRef = useRef<S | null>(null);
   const isPaintingRef = useRef<boolean>(false);
   const currentShapeIdRef = useRef<string>('');
+  const cleanupRef = useRef<() => void>(null);
   const transformerRef = useRef<T>(null);
   const isDraggable = drawType === SELECT;
 
@@ -60,56 +61,7 @@ export const Paint: FC = () => {
     transformerRef?.current?.nodes?.([]);
   };
 
-  const onStageMouseDown = useCallback(() => {
-    if (drawType === SELECT) return;
-
-    isPaintingRef.current = true;
-    const stageEl = stageRef.current;
-    const pointerPosition = stageEl?.getPointerPosition();
-    const x = pointerPosition?.x || 0;
-    const y = pointerPosition?.y || 0;
-    const id = uuidv4();
-    currentShapeIdRef.current = id;
-
-    switch (drawType) {
-      case RECTANGLE:
-        setRects((prevRects) => [
-          ...prevRects,
-          {
-            id,
-            x,
-            y,
-            width: 1,
-            height: 1,
-          },
-        ]);
-        break;
-      case CIRCLE:
-        setCircles((prevCircles) => [
-          ...prevCircles,
-          {
-            id,
-            x,
-            y,
-            radius: 1,
-          },
-        ]);
-        break;
-      case PENCIL:
-        setLines((prevLines) => [
-          ...prevLines,
-          {
-            id,
-            points: [x, y],
-          },
-        ]);
-        break;
-      default:
-        break;
-    }
-  }, [drawType]);
-
-  const onStageMouseMove = useCallback(() => {
+  const onStagePointerMove = useCallback(() => {
     if (drawType === SELECT || !isPaintingRef.current) return;
 
     const stageEl = stageRef.current;
@@ -163,10 +115,92 @@ export const Paint: FC = () => {
     }
   }, [drawType]);
 
-  const onStageMouseUp = () => {
-    stageRef.current?.removeEventListener('mousemove');
+  const onStagePointerEnd = useCallback(() => {
+    cleanupRef.current?.();
+    stageRef.current?.off('pointermove', onStagePointerMove);
     isPaintingRef.current = false;
-  };
+  }, [onStagePointerMove]);
+
+  const onStagePointerDown = useCallback(
+    (e: KonvaEventObject<PointerEvent>) => {
+      if (drawType === SELECT) return;
+      e.evt.preventDefault();
+
+      const stage = stageRef.current;
+      if (!stage) return;
+
+      stage?.on('pointermove', onStagePointerMove);
+      isPaintingRef.current = true;
+
+      const handleGlobalMove = (e: MouseEvent) => {
+        if (!isPaintingRef.current) return;
+
+        const container = stage.container();
+        const rect = container.getBoundingClientRect();
+        const isOutside =
+          e.clientX < rect.left ||
+          e.clientX > rect.right ||
+          e.clientY < rect.top ||
+          e.clientY > rect.bottom;
+
+        if (isOutside) onStagePointerEnd();
+      };
+
+      cleanupRef.current?.();
+
+      window.addEventListener('mousemove', handleGlobalMove);
+      window.addEventListener('pointerup', onStagePointerEnd);
+
+      cleanupRef.current = () => {
+        window.removeEventListener('mousemove', handleGlobalMove);
+        window.removeEventListener('pointerup', onStagePointerEnd);
+      };
+
+      const pointerPosition = stage?.getPointerPosition();
+      const x = pointerPosition?.x || 0;
+      const y = pointerPosition?.y || 0;
+      const id = uuidv4();
+      currentShapeIdRef.current = id;
+
+      switch (drawType) {
+        case RECTANGLE:
+          setRects((prevRects) => [
+            ...prevRects,
+            {
+              id,
+              x,
+              y,
+              width: 1,
+              height: 1,
+            },
+          ]);
+          break;
+        case CIRCLE:
+          setCircles((prevCircles) => [
+            ...prevCircles,
+            {
+              id,
+              x,
+              y,
+              radius: 1,
+            },
+          ]);
+          break;
+        case PENCIL:
+          setLines((prevLines) => [
+            ...prevLines,
+            {
+              id,
+              points: [x, y],
+            },
+          ]);
+          break;
+        default:
+          break;
+      }
+    },
+    [drawType, onStagePointerMove, onStagePointerEnd]
+  );
 
   return (
     <div className='flex flex-col items-center w-full'>
@@ -182,9 +216,8 @@ export const Paint: FC = () => {
         ref={stageRef}
         width={isMobile ? MIN_SIZE : SIZE}
         height={isMobile ? MIN_SIZE : SIZE}
-        onMouseDown={onStageMouseDown}
-        onMouseUp={onStageMouseUp}
-        onMouseMove={isPaintingRef.current ? onStageMouseMove : undefined}
+        onPointerDown={onStagePointerDown}
+        onPointerCancel={onStagePointerEnd}
       >
         <Layer>
           {/* Background rectangle for exported canvas */}
@@ -194,7 +227,7 @@ export const Paint: FC = () => {
             width={isMobile ? MIN_SIZE : SIZE}
             height={isMobile ? MIN_SIZE : SIZE}
             fill='white'
-            onClick={onBgClick}
+            onPointerClick={onBgClick}
           />
           {image && (
             <Image
@@ -204,7 +237,7 @@ export const Paint: FC = () => {
               width={SIZE / 3}
               height={SIZE / 3}
               draggable={isDraggable}
-              onClick={onShapeClick}
+              onPointerClick={onShapeClick}
             />
           )}
         </Layer>
@@ -222,7 +255,7 @@ export const Paint: FC = () => {
                   stroke={'black'}
                   strokeWidth={3}
                   draggable={isDraggable}
-                  onClick={onShapeClick}
+                  onPointerClick={onShapeClick}
                 />
               ))}
           </Group>
@@ -238,7 +271,7 @@ export const Paint: FC = () => {
                   stroke={'black'}
                   strokeWidth={3}
                   draggable={isDraggable}
-                  onClick={onShapeClick}
+                  onPointerClick={onShapeClick}
                 />
               ))}
           </Group>
@@ -254,7 +287,7 @@ export const Paint: FC = () => {
                   stroke={'black'}
                   strokeWidth={5}
                   draggable={isDraggable}
-                  onClick={onShapeClick}
+                  onPointerClick={onShapeClick}
                 />
               ))}
           </Group>
