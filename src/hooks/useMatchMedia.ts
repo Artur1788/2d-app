@@ -32,7 +32,7 @@ export const useMatchMedia = (): Record<
         mediaQuery.removeEventListener('change', handler)
       );
     };
-  }, [matches, getMatches, mediaQueries]);
+  }, [getMatches, mediaQueries]);
 
   return ['isMobile', 'isTablet', 'isDesktop'].reduce(
     (acc, key, index) => ({
