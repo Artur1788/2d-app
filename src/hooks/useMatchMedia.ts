@@ -1,27 +1,44 @@
-import { useState, useLayoutEffect } from 'react';
+import { useState, useLayoutEffect, useCallback } from 'react';
 
-export const useMatchMedia = (query: number = 620): boolean => {
-  const [matches, setMatches] = useState<boolean>(false);
+const staticQueries = [
+  '(max-width: 620px)',
+  '(max-width: 768px)',
+  '(min-width: 1024px)',
+];
+
+export const useMatchMedia = (): Record<
+  'isMobile' | 'isTablet' | 'isDesktop',
+  boolean
+> => {
+  const mediaQueries = staticQueries.map((query) => matchMedia(query));
+  const getMatches = useCallback(
+    () => mediaQueries.map((mediaQuery) => mediaQuery.matches),
+    [mediaQueries]
+  );
+
+  const [matches, setMatches] = useState<boolean[]>(getMatches);
 
   useLayoutEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const mediaQuery = window.matchMedia(`(max-width: ${query}px)`);
+    const handler = () => setMatches(getMatches);
 
-    setMatches(mediaQuery.matches);
-
-    const handler = (e: MediaQueryListEvent) => {
-      if (e.matches !== matches) {
-        setMatches(e.matches);
-      }
-    };
-
-    mediaQuery.addEventListener('change', handler);
+    mediaQueries.forEach((mediaQuery) =>
+      mediaQuery.addEventListener('change', handler)
+    );
 
     return () => {
-      mediaQuery.removeEventListener('change', handler);
+      mediaQueries.forEach((mediaQuery) =>
+        mediaQuery.removeEventListener('change', handler)
+      );
     };
-  }, [matches, query]);
+  }, [matches, getMatches, mediaQueries]);
 
-  return matches;
+  return ['isMobile', 'isTablet', 'isDesktop'].reduce(
+    (acc, key, index) => ({
+      ...acc,
+      [key]: matches[index],
+    }),
+    {} as Record<'isMobile' | 'isTablet' | 'isDesktop', boolean>
+  );
 };

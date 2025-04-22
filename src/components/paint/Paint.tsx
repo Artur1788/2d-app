@@ -35,7 +35,7 @@ export const Paint: FC = () => {
   const [rects, setRects] = useState<IRectangle[]>([]);
   const [circles, setCircles] = useState<ICircle[]>([]);
   const [lines, setLines] = useState<ILine[]>([]);
-  const isMobile = useMatchMedia();
+  const { isMobile } = useMatchMedia();
   const stageRef = useRef<S | null>(null);
   const isPaintingRef = useRef<boolean>(false);
   const currentShapeIdRef = useRef<string>('');
